@@ -8,7 +8,7 @@
     "build:css": "cp css/dashboard.css ../priv/static/dashboard.css",
     "build:all": "npm run build && npm run build:css",
     "watch": "esbuild js/app.js --bundle --outfile=../priv/static/dashboard.js --format=esm --target=es2020 --watch",
-    "test": "echo 'No JS tests configured' && exit 0"
+    "test": "node --test \"js/**/*.test.js\""
   },
   "dependencies": {
     "phoenix": "file:../deps/phoenix",

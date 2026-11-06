@@ -11,7 +11,7 @@ defmodule BB.LiveView.DashboardLive do
   - Joint positions and sliders
   - Event stream monitor
   - Command execution
-  - 3D visualisation
+  - 3D visualisation, with a tab for live image sensor feeds
   - Parameter editor
   """
 
@@ -21,6 +21,7 @@ defmodule BB.LiveView.DashboardLive do
 
   alias BB.LiveView.Components.Command
   alias BB.LiveView.Components.EventStream
+  alias BB.LiveView.Components.Images
   alias BB.LiveView.Components.JointControl
   alias BB.LiveView.Components.Parameters
   alias BB.LiveView.Components.Safety
@@ -40,6 +41,7 @@ defmodule BB.LiveView.DashboardLive do
       |> assign(:joint_positions, %{})
       |> assign(:latest_joint_message, nil)
       |> assign(:joint_state_flush_scheduled, false)
+      |> assign(:vis_tab, :three_d)
 
     if connected?(socket) do
       subscribe_to_robot(robot_module)
@@ -98,6 +100,21 @@ defmodule BB.LiveView.DashboardLive do
       |> assign(:joint_positions, Map.merge(socket.assigns.joint_positions, positions))
       |> assign(:latest_joint_message, {path, message})
       |> schedule_joint_state_flush()
+
+    {:noreply, socket}
+  end
+
+  def handle_info(
+        {:bb, [:sensor | _rest] = path,
+         %BB.Message{payload: %BB.Message.Sensor.Image{}} = message},
+        socket
+      ) do
+    send_update(Images, id: "images", event: {:image, path, message})
+
+    send_update(EventStream,
+      id: "event_stream",
+      event: {:new_message, path, message}
+    )
 
     {:noreply, socket}
   end
@@ -205,6 +222,15 @@ defmodule BB.LiveView.DashboardLive do
   end
 
   @impl Phoenix.LiveView
+  def handle_event("select_vis_tab", %{"tab" => tab}, socket) do
+    case tab do
+      "3d" -> {:noreply, assign(socket, :vis_tab, :three_d)}
+      "images" -> {:noreply, assign(socket, :vis_tab, :images)}
+      _ -> {:noreply, socket}
+    end
+  end
+
+  @impl Phoenix.LiveView
   def render(assigns) do
     ~H"""
     <div class="bb-dashboard-container">
@@ -228,8 +254,29 @@ defmodule BB.LiveView.DashboardLive do
           </div>
 
           <div class="bb-dashboard-main-area">
-            <.widget title="3D Visualisation" class="bb-widget-visualisation">
-              <.live_component module={Visualisation} id="visualisation" robot_module={@robot_module} />
+            <.widget title="Visualisation" class="bb-widget-visualisation">
+              <:actions>
+                <.vis_tabs active={@vis_tab} />
+              </:actions>
+
+              <%!-- Both views stay mounted: hiding rather than removing keeps the
+                    Three.js scene alive across tab switches. --%>
+              <div id="vis-tab-3d" class="bb-vis-tab-panel" hidden={@vis_tab != :three_d}>
+                <.live_component
+                  module={Visualisation}
+                  id="visualisation"
+                  robot_module={@robot_module}
+                />
+              </div>
+
+              <div id="vis-tab-images" class="bb-vis-tab-panel" hidden={@vis_tab != :images}>
+                <.live_component
+                  module={Images}
+                  id="images"
+                  robot_module={@robot_module}
+                  active={@vis_tab == :images}
+                />
+              </div>
             </.widget>
 
             <.widget title="Joint Control">
@@ -248,6 +295,26 @@ defmodule BB.LiveView.DashboardLive do
           </div>
         </div>
       </div>
+    </div>
+    """
+  end
+
+  attr(:active, :atom, required: true)
+
+  defp vis_tabs(assigns) do
+    ~H"""
+    <div class="bb-tabs bb-vis-tabs" role="tablist">
+      <button
+        :for={{tab, value, label} <- [{:three_d, "3d", "3D"}, {:images, "images", "Images"}]}
+        type="button"
+        role="tab"
+        aria-selected={to_string(@active == tab)}
+        class={["bb-tab", @active == tab && "active"]}
+        phx-click="select_vis_tab"
+        phx-value-tab={value}
+      >
+        {label}
+      </button>
     </div>
     """
   end

@@ -377,6 +377,84 @@
   font-size: 0.875rem;
 }
 
+/* Visualisation tabs (3D | Images) */
+.bb-vis-tabs {
+  border-bottom: none;
+  margin: -0.75rem 0;
+}
+
+.bb-vis-tabs .bb-tab {
+  padding: 0.75rem 0.75rem calc(0.75rem - 2px);
+}
+
+.bb-vis-tab-panel[hidden] {
+  display: none;
+}
+
+/* Image sensor feeds */
+.bb-images {
+  padding: 1rem;
+  min-height: 400px;
+  box-sizing: border-box;
+}
+
+.bb-images-empty {
+  min-height: 368px;
+}
+
+.bb-images-hint {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.bb-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.bb-image-tile {
+  margin: 0;
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius);
+  overflow: hidden;
+  background: var(--bb-bg);
+}
+
+.bb-image-frame {
+  width: 100%;
+  max-height: 400px;
+  background: #111827;
+}
+
+.bb-image-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.bb-image-caption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--bb-border);
+  background: var(--bb-bg-secondary);
+  font-size: 0.75rem;
+}
+
+.bb-image-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 500;
+}
+
+.bb-image-meta {
+  color: var(--bb-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Dashboard Grid Layout */
 .bb-dashboard-grid {
   display: grid;

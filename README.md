@@ -22,6 +22,7 @@ Interactive LiveView dashboard for [Beam Bots](https://github.com/beam-bots/bb) 
 - **Safety Controls** - Arm/disarm robot with visual state indicators
 - **Joint Control** - Real-time sliders for all movable joints with position feedback
 - **3D Visualisation** - Interactive Three.js view with orbit controls showing live robot pose
+- **Images** - A tab beside the 3D view with live feeds from every sensor publishing `BB.Message.Sensor.Image`
 - **Event Stream** - Monitor PubSub messages with filtering and pause/resume
 - **Command Execution** - Dynamic forms for robot commands based on DSL definitions
 - **Parameter Editor** - View and modify runtime parameters with type-specific controls
@@ -161,6 +162,15 @@ Interactive Three.js renderer showing:
 - Real-time joint position updates via forward kinematics
 - Orbit controls (drag to rotate, scroll to zoom, right-drag to pan)
 - Reset View button to restore default camera position
+
+### Images
+
+A tab beside the 3D view showing live feeds from image sensors:
+
+- One tile per sensor publishing `BB.Message.Sensor.Image` under `[:sensor | path]`, discovered automatically
+- Path, resolution, encoding and measured frame rate for each feed
+- 8- and 16-bit RGB/BGR(A) and mono encodings (Bayer shown as greyscale)
+- Frames are only sent while the tab is open, at most 5 per second per sensor, newest first
 
 ### Event Stream
 

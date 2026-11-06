@@ -20,6 +20,7 @@ defmodule BB.LiveView.Components.EventStream do
   @max_messages 100
   @default_flush_interval_ms 500
   @default_debounce_window_ms 1000
+  @max_string_bytes 200
 
   @impl Phoenix.LiveComponent
   def mount(socket) do
@@ -263,8 +264,32 @@ defmodule BB.LiveView.Components.EventStream do
   defp format_value(value) when is_float(value), do: format_number(value)
   defp format_value(value) when is_integer(value), do: Integer.to_string(value)
   defp format_value(value) when is_atom(value), do: Atom.to_string(value)
-  defp format_value(value) when is_binary(value), do: value
+  # Payloads can carry raw bytes (an image's pixel data, say). Rendered as-is
+  # they bloat the diff, and invalid UTF-8 makes the socket's JSON encoding
+  # raise, so only short printable text is shown verbatim.
+  defp format_value(value) when is_binary(value) and byte_size(value) <= @max_string_bytes do
+    if String.printable?(value), do: value, else: byte_summary(value)
+  end
+
+  defp format_value(value) when is_binary(value) do
+    prefix = value |> binary_part(0, @max_string_bytes) |> valid_utf8_prefix()
+
+    if String.printable?(prefix), do: prefix <> "…", else: byte_summary(value)
+  end
+
   defp format_value(value), do: inspect(value, limit: 10)
+
+  defp byte_summary(value), do: "<<#{byte_size(value)} bytes>>"
+
+  # Cutting at a byte offset can split a multi-byte character; drop the
+  # partial one rather than calling the whole string binary.
+  defp valid_utf8_prefix(bytes) do
+    case :unicode.characters_to_binary(bytes) do
+      {:incomplete, valid, _rest} -> valid
+      valid when is_binary(valid) -> valid
+      {:error, _valid, _rest} -> bytes
+    end
+  end
 
   defp format_number(n) when is_float(n), do: :erlang.float_to_binary(n, decimals: 3)
   defp format_number(n), do: Integer.to_string(n)

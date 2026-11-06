@@ -23,7 +23,7 @@ defmodule BB.LiveView.DashboardLiveTest do
       |> visit("/robot")
       |> assert_has(".bb-widget-title", text: "Safety")
       |> assert_has(".bb-widget-title", text: "Commands")
-      |> assert_has(".bb-widget-title", text: "3D Visualisation")
+      |> assert_has(".bb-widget-title", text: "Visualisation")
       |> assert_has(".bb-widget-title", text: "Joint Control")
       |> assert_has(".bb-widget-title", text: "Event Stream")
       |> assert_has(".bb-widget-title", text: "Parameters")
@@ -88,6 +88,30 @@ defmodule BB.LiveView.DashboardLiveTest do
       conn
       |> visit("/robot")
       |> assert_has(".bb-parameters")
+    end
+  end
+
+  describe "visualisation tabs" do
+    test "starts on the 3D tab with the images panel hidden", %{conn: conn} do
+      conn
+      |> visit("/robot")
+      |> assert_has(".bb-vis-tabs .bb-tab.active", text: "3D")
+      |> assert_has(".bb-vis-tabs .bb-tab", text: "Images")
+      |> refute_has("#vis-tab-3d[hidden]")
+      |> assert_has("#vis-tab-images[hidden]")
+    end
+
+    test "switching to Images hides the 3D view without removing it", %{conn: conn} do
+      conn
+      |> visit("/robot")
+      |> click_button("Images")
+      |> assert_has(".bb-vis-tabs .bb-tab.active", text: "Images")
+      |> assert_has("#vis-tab-3d[hidden] [phx-hook=Visualisation]")
+      |> refute_has("#vis-tab-images[hidden]")
+      |> assert_has("#vis-tab-images [phx-hook=ImageGrid]")
+      |> click_button("3D")
+      |> assert_has(".bb-vis-tabs .bb-tab.active", text: "3D")
+      |> assert_has("#vis-tab-images[hidden]")
     end
   end
 

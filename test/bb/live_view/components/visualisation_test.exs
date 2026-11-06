@@ -11,6 +11,7 @@ defmodule BB.LiveView.Components.VisualisationTest do
   alias BB.LiveView.PlanarRobot
   alias BB.Math.Transform2D
   alias BB.Message
+  alias BB.Message.Sensor.Image
   alias BB.Message.Sensor.JointState
   alias BB.Robot.Runtime, as: RobotRuntime
   alias BB.Robot.State, as: RobotState
@@ -73,6 +74,51 @@ defmodule BB.LiveView.Components.VisualisationTest do
 
       assert x == 0.5
       assert w == 1.0
+    end
+  end
+
+  describe "image sensors" do
+    setup do
+      start_supervised!(PlanarRobot)
+      :ok
+    end
+
+    test "Image messages from the robot reach the Images tab", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/planar_robot")
+
+      {:ok, message} =
+        Message.new(Image, :camera,
+          width: 2,
+          height: 1,
+          encoding: :rgb8,
+          step: 6,
+          data: <<255, 0, 0, 0, 0, 255>>
+        )
+
+      BB.publish(PlanarRobot, [:sensor, :base_link, :camera], message)
+
+      # Discovered while the 3D tab is showing, but not streamed until the
+      # Images tab is.
+      assert eventually(fn -> render(view) =~ "base_link.camera" end)
+      refute_push_event(view, "bb_image_frame", %{}, 50)
+
+      view |> element(".bb-vis-tabs button", "Images") |> render_click()
+
+      expected = Base.encode64(<<255, 0, 0, 0, 0, 255>>)
+      assert_push_event(view, "bb_image_frame", %{width: 2, height: 1, data: ^expected}, 500)
+
+      # The event stream lists it too (after its 500 ms flush), without
+      # dumping the pixels.
+      assert eventually(fn -> has_element?(view, ".bb-event-field-value", "<<6 bytes>>") end, 100)
+      assert String.valid?(render(view))
+    end
+  end
+
+  defp eventually(fun, attempts \\ 20) do
+    cond do
+      fun.() -> true
+      attempts == 0 -> false
+      true -> Process.sleep(10) && eventually(fun, attempts - 1)
     end
   end
 

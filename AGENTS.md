@@ -29,13 +29,14 @@ Main LiveView that:
 
 ### Components (`lib/bb/live_view/components/`)
 
-Six LiveComponents, each handling a specific concern:
+Seven LiveComponents, each handling a specific concern:
 
 | Component | File | Purpose |
 |-----------|------|---------|
 | Safety | `safety.ex` | Arm/disarm controls, safety state display |
 | JointControl | `joint_control.ex` | Joint sliders with position feedback |
 | Visualisation | `visualisation.ex` | 3D robot view (Three.js) |
+| Images | `images.ex` | Image sensor feeds, in a tab beside the 3D view |
 | EventStream | `event_stream.ex` | PubSub message monitor |
 | Command | `command.ex` | Command execution forms |
 | Parameters | `parameters.ex` | Runtime parameter editor |

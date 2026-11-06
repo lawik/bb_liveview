@@ -172,6 +172,11 @@ export const Visualisation = {
 
   animate() {
     this.animationId = requestAnimationFrame(() => this.animate());
+
+    // Skip rendering while hidden (e.g. behind the Images tab); the scene is
+    // kept so switching back is instant.
+    if (this.el.offsetParent === null) return;
+
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   },
