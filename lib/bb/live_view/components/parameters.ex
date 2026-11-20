@@ -180,12 +180,17 @@ defmodule BB.LiveView.Components.Parameters do
     is_remote = tab.type == :remote
     path_str = format_path_string(param[:path] || param[:id])
 
+    # These templates are rendered with the component's assigns, whose
+    # `__changed__` only ever names the component's own assigns. A key added
+    # with `Map.put` is missing from it, so LiveView treats `@value` and the
+    # rest as unchanged and leaves them out of the diff: the inputs would keep
+    # the value they were first rendered with. `assign/3` marks them changed.
     assigns =
       assigns
-      |> Map.put(:param, param)
-      |> Map.put(:is_remote, is_remote)
-      |> Map.put(:bridge_name, if(is_remote, do: tab.bridge_name, else: ""))
-      |> Map.put(:path_str, path_str)
+      |> assign(:param, param)
+      |> assign(:is_remote, is_remote)
+      |> assign(:bridge_name, if(is_remote, do: tab.bridge_name, else: ""))
+      |> assign(:path_str, path_str)
 
     input_type = determine_input_type(param.type, has_limits)
     render_input_by_type(input_type, assigns)
@@ -233,11 +238,11 @@ defmodule BB.LiveView.Components.Parameters do
 
     assigns =
       assigns
-      |> Map.put(:step, step)
-      |> Map.put(:unit, unit)
-      |> Map.put(:min, min)
-      |> Map.put(:max, max)
-      |> Map.put(:value, value || 0)
+      |> assign(:step, step)
+      |> assign(:unit, unit)
+      |> assign(:min, min)
+      |> assign(:max, max)
+      |> assign(:value, value || 0)
 
     ~H"""
     <div class="bb-slider-input" id={"slider-#{@path_str}"}>
@@ -282,9 +287,9 @@ defmodule BB.LiveView.Components.Parameters do
 
     assigns =
       assigns
-      |> Map.put(:step, step)
-      |> Map.put(:unit, unit)
-      |> Map.put(:value, value || 0)
+      |> assign(:step, step)
+      |> assign(:unit, unit)
+      |> assign(:value, value || 0)
 
     ~H"""
     <div class="bb-number-input">
@@ -311,7 +316,7 @@ defmodule BB.LiveView.Components.Parameters do
 
   defp render_atom_input(assigns) do
     display_value = if assigns.param.value, do: ":#{assigns.param.value}", else: ""
-    assigns = Map.put(assigns, :display_value, display_value)
+    assigns = assign(assigns, :display_value, display_value)
 
     ~H"""
     <form
