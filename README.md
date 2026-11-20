@@ -23,6 +23,7 @@ Interactive LiveView dashboard for [Beam Bots](https://github.com/beam-bots/bb) 
 - **Joint Control** - Real-time sliders for all movable joints with position feedback
 - **3D Visualisation** - Interactive Three.js view with orbit controls showing live robot pose
 - **Images** - A tab beside the 3D view with live feeds from every sensor publishing `BB.Message.Sensor.Image`
+- **Drive** - Optional hold-to-drive with the arrow keys, WASD or an on-screen pad
 - **Event Stream** - Monitor PubSub messages with filtering and pause/resume
 - **Command Execution** - Dynamic forms for robot commands based on DSL definitions
 - **Parameter Editor** - View and modify runtime parameters with type-specific controls
@@ -171,6 +172,23 @@ A tab beside the 3D view showing live feeds from image sensors:
 - Path, resolution, encoding and measured frame rate for each feed
 - 8- and 16-bit RGB/BGR(A) and mono encodings (Bayer shown as greyscale)
 - Frames are only sent while the tab is open, at most 5 per second per sensor, newest first
+
+### Drive
+
+An optional widget for driving a robot by hand, enabled with the `:drive` option:
+
+```elixir
+bb_dashboard "/robot",
+  robot: MyRobot,
+  drive: [publish: {MyRobot.Drive, :tick}, stop: {MyRobot.Drive, :stop}]
+```
+
+- Nothing is captured until you press **Take control**, and never while typing in a form field
+- Hold the arrow keys, WASD (by position, so any keyboard layout) or the on-screen pad for throttle and turn
+- While a key is held the browser sends a tick 20 times a second (`:rate`), and `publish(robot, throttle, turn)` is called with each in -1..1; `stop(robot)` is called when you let go, release control, or the window loses focus
+- The same contract as bb_tui's drive extension, so one pair of functions serves both
+
+Ticks stop arriving if the browser goes away, so `publish` should keep the robot moving only briefly after each one. See `BB.LiveView.Drive`.
 
 ### Event Stream
 

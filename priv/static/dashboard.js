@@ -9506,6 +9506,165 @@ var AutoScroll = {
   }
 };
 
+// js/drive/state.js
+var KEY_DIRECTIONS = {
+  ArrowUp: "up",
+  ArrowDown: "down",
+  ArrowLeft: "left",
+  ArrowRight: "right",
+  KeyW: "up",
+  KeyS: "down",
+  KeyA: "left",
+  KeyD: "right"
+};
+var DIRECTIONS = ["up", "down", "left", "right"];
+function directionForCode(code) {
+  return KEY_DIRECTIONS[code] ?? null;
+}
+function command(held) {
+  const has = (direction) => held.has(direction) ? 1 : 0;
+  return {
+    throttle: has("up") - has("down"),
+    turn: has("left") - has("right")
+  };
+}
+var Held = class {
+  constructor() {
+    this.sources = /* @__PURE__ */ new Map();
+  }
+  press(source, direction) {
+    this.sources.set(source, direction);
+  }
+  /** Returns whether the source was holding anything. */
+  release(source) {
+    return this.sources.delete(source);
+  }
+  clear() {
+    this.sources.clear();
+  }
+  get any() {
+    return this.sources.size > 0;
+  }
+  get directions() {
+    return new Set(this.sources.values());
+  }
+};
+
+// js/hooks/drive_pad.js
+var DrivePad = {
+  mounted() {
+    this.held = new Held();
+    this.timer = null;
+    this.driving = false;
+    this.onKeyDown = (event) => this.keyDown(event);
+    this.onKeyUp = (event) => this.keyUp(event);
+    this.onPointerDown = (event) => this.pointerDown(event);
+    this.onPointerUp = (event) => this.pointerUp(event);
+    this.onBlur = () => this.releaseAll();
+    this.onVisibility = () => document.hidden && this.releaseAll();
+    this.onContextMenu = (event) => event.target.closest("[data-drive-key]") && event.preventDefault();
+    window.addEventListener("keydown", this.onKeyDown);
+    window.addEventListener("keyup", this.onKeyUp);
+    window.addEventListener("blur", this.onBlur);
+    document.addEventListener("visibilitychange", this.onVisibility);
+    this.el.addEventListener("pointerdown", this.onPointerDown);
+    window.addEventListener("pointerup", this.onPointerUp);
+    window.addEventListener("pointercancel", this.onPointerUp);
+    this.el.addEventListener("contextmenu", this.onContextMenu);
+    this.syncPad();
+  },
+  updated() {
+    if (!this.inControl()) this.releaseAll();
+    this.syncPad();
+  },
+  destroyed() {
+    window.removeEventListener("keydown", this.onKeyDown);
+    window.removeEventListener("keyup", this.onKeyUp);
+    window.removeEventListener("blur", this.onBlur);
+    document.removeEventListener("visibilitychange", this.onVisibility);
+    window.removeEventListener("pointerup", this.onPointerUp);
+    window.removeEventListener("pointercancel", this.onPointerUp);
+    this.stopTimer();
+  },
+  inControl() {
+    return this.el.dataset.inControl === "true";
+  },
+  rate() {
+    return Number.parseInt(this.el.dataset.rate, 10) || 20;
+  },
+  keyDown(event) {
+    if (!this.inControl() || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (isTyping(event.target)) return;
+    const direction = directionForCode(event.code);
+    if (!direction) return;
+    event.preventDefault();
+    if (event.repeat) return;
+    this.held.press(`key:${event.code}`, direction);
+    this.changed();
+  },
+  keyUp(event) {
+    if (this.held.release(`key:${event.code}`)) {
+      event.preventDefault();
+      this.changed();
+    }
+  },
+  pointerDown(event) {
+    const button = event.target.closest("[data-drive-key]");
+    if (!button || !this.inControl()) return;
+    event.preventDefault();
+    this.held.press(`pointer:${event.pointerId}`, button.dataset.driveKey);
+    this.changed();
+  },
+  pointerUp(event) {
+    if (this.held.release(`pointer:${event.pointerId}`)) this.changed();
+  },
+  changed() {
+    this.syncPad();
+    if (this.held.any) {
+      this.tick();
+      if (!this.timer) this.timer = setInterval(() => this.tick(), 1e3 / this.rate());
+    } else {
+      this.stopDriving();
+    }
+  },
+  tick() {
+    this.driving = true;
+    this.pushEventTo(this.el, "drive", command(this.held.directions));
+  },
+  stopDriving() {
+    this.stopTimer();
+    if (this.driving) {
+      this.driving = false;
+      this.pushEventTo(this.el, "drive_stop", {});
+    }
+  },
+  stopTimer() {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  },
+  releaseAll() {
+    this.held.clear();
+    this.syncPad();
+    this.stopDriving();
+  },
+  // The pad is `phx-update="ignore"`, so its state is set here.
+  syncPad() {
+    const enabled = this.inControl();
+    const held = this.held.directions;
+    for (const direction of DIRECTIONS) {
+      const button = this.el.querySelector(`[data-drive-key="${direction}"]`);
+      if (!button) continue;
+      button.disabled = !enabled;
+      button.toggleAttribute("data-held", held.has(direction));
+    }
+  }
+};
+function isTyping(target) {
+  return Boolean(target?.closest?.("input, textarea, select, [contenteditable='true']"));
+}
+
 // js/images/convert.js
 var LAYOUTS = {
   rgb8: { channels: 3, bytes: 1, r: 0, g: 1, b: 2 },
@@ -31026,6 +31185,7 @@ var Visualisation = {
 // js/app.js
 var Hooks2 = {
   AutoScroll,
+  DrivePad,
   ImageGrid,
   Visualisation
 };

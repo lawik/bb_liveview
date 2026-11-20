@@ -20,6 +20,7 @@ defmodule BB.LiveView.DashboardLive do
   import BB.LiveView.Components
 
   alias BB.LiveView.Components.Command
+  alias BB.LiveView.Components.Drive
   alias BB.LiveView.Components.EventStream
   alias BB.LiveView.Components.Images
   alias BB.LiveView.Components.JointControl
@@ -42,6 +43,7 @@ defmodule BB.LiveView.DashboardLive do
       |> assign(:latest_joint_message, nil)
       |> assign(:joint_state_flush_scheduled, false)
       |> assign(:vis_tab, :three_d)
+      |> assign_new(:drive, fn -> nil end)
 
     if connected?(socket) do
       subscribe_to_robot(robot_module)
@@ -70,6 +72,10 @@ defmodule BB.LiveView.DashboardLive do
       id: "joint_control",
       event: {:armed_changed, armed}
     )
+
+    if socket.assigns.drive do
+      send_update(Drive, id: "drive", event: {:armed_changed, armed})
+    end
 
     send_update(Command,
       id: "command",
@@ -246,6 +252,10 @@ defmodule BB.LiveView.DashboardLive do
           <div class="bb-dashboard-sidebar">
             <.widget title="Safety">
               <.live_component module={Safety} id="safety" robot_module={@robot_module} />
+            </.widget>
+
+            <.widget :if={@drive} title="Drive">
+              <.live_component module={Drive} id="drive" robot_module={@robot_module} drive={@drive} />
             </.widget>
 
             <.widget title="Commands">

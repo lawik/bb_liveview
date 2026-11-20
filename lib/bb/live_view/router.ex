@@ -25,6 +25,8 @@ defmodule BB.LiveView.Router do
   ## Options
 
     * `:robot` - Required. The robot module to control. Must define a `robot/0` function.
+    * `:drive` - Optional. Adds a Drive widget for hold-to-drive with the
+      keyboard or an on-screen pad. See `BB.LiveView.Drive`.
 
   ## Authentication
 
@@ -49,6 +51,12 @@ defmodule BB.LiveView.Router do
     quote bind_quoted: binding() do
       robot = Keyword.fetch!(opts, :robot)
 
+      drive =
+        case Keyword.fetch(opts, :drive) do
+          {:ok, drive_opts} -> BB.LiveView.Drive.new!(drive_opts)
+          :error -> nil
+        end
+
       scope path, alias: false, as: false do
         import Phoenix.LiveView.Router, only: [live: 3, live: 4, live_session: 3]
 
@@ -62,7 +70,10 @@ defmodule BB.LiveView.Router do
         )
 
         live_session :"bb_dashboard_#{robot}",
-          on_mount: [{BB.LiveView.Hooks.AssignRobot, robot}],
+          on_mount: [
+            {BB.LiveView.Hooks.AssignRobot, robot},
+            {BB.LiveView.Hooks.AssignDrive, drive}
+          ],
           root_layout: {BB.LiveView.Layouts, :root} do
           live("/", BB.LiveView.DashboardLive, :index)
         end
