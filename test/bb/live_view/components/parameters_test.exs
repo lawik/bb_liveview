@@ -140,6 +140,43 @@ defmodule BB.LiveView.Components.ParametersTest do
     end
   end
 
+  # The widget re-renders from the change notification the runtime publishes,
+  # not from what was typed, so these wait for that round trip.
+  describe "showing a change" do
+    setup %{conn: conn} do
+      start_supervised!(ParameterRobot)
+      {:ok, view, _html} = live(conn, "/parameter_robot")
+      %{view: view}
+    end
+
+    test "moving a slider updates the number input beside it", %{view: view} do
+      view
+      |> form(~s([id="param-range-motion.gain"]), %{"value" => "0.8"})
+      |> render_change()
+
+      assert eventually(fn ->
+               has_element?(view, ~s([id="param-number-motion.gain"] input[value="0.8"]))
+             end)
+    end
+
+    test "a change made elsewhere updates the inputs", %{view: view} do
+      :ok = Parameter.set(ParameterRobot, [:motion, :taps], 12)
+
+      assert eventually(fn ->
+               has_element?(view, ~s([id="param-range-motion.taps"] input[value="12"])) and
+                 has_element?(view, ~s([id="param-number-motion.taps"] input[value="12"]))
+             end)
+    end
+
+    test "a change to an unbounded parameter updates its number input", %{view: view} do
+      :ok = Parameter.set(ParameterRobot, [:motion, :reach], Localize.Unit.new!(1.25, "meter"))
+
+      assert eventually(fn ->
+               has_element?(view, ~s([id="param-number-motion.reach"] input[value="1.25"]))
+             end)
+    end
+  end
+
   describe "refused writes" do
     setup %{conn: conn} do
       start_supervised!(ParameterRobot)
@@ -163,6 +200,14 @@ defmodule BB.LiveView.Components.ParametersTest do
       html = view |> form(selector, %{"value" => "15"}) |> render_change()
 
       refute html =~ "bb-error-message"
+    end
+  end
+
+  defp eventually(fun, attempts \\ 20) do
+    cond do
+      fun.() -> true
+      attempts == 0 -> false
+      true -> Process.sleep(10) && eventually(fun, attempts - 1)
     end
   end
 end
