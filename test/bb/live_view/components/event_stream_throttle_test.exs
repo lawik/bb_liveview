@@ -36,10 +36,10 @@ defmodule BB.LiveView.Components.EventStreamThrottleTest do
     live_isolated(conn, EventStreamHostLive, session: session)
   end
 
-  defp joint_state_message do
+  defp joint_state_message(position \\ 0.0) do
     %Message{
       wall_time: System.os_time(:nanosecond),
-      payload: %JointState{names: [:joint1], positions: [0.0], velocities: [], efforts: []}
+      payload: %JointState{names: [:joint1], positions: [position], velocities: [], efforts: []}
     }
   end
 
@@ -127,6 +127,43 @@ defmodule BB.LiveView.Components.EventStreamThrottleTest do
       wait_for_flush()
 
       assert render(view) =~ "2 messages"
+    end
+
+    test "shows the newest repeat once the window closes", %{conn: conn} do
+      {:ok, view, _html} = mount_host(conn)
+
+      for position <- [0.1, 0.2, 0.3] do
+        inject(view, [:sensor, :imu], joint_state_message(position))
+      end
+
+      wait_for_flush()
+      assert render(view) =~ "1 messages"
+
+      Process.sleep(@debounce_window_ms)
+      wait_for_flush()
+
+      html = render(view)
+      assert html =~ "2 messages"
+      assert html =~ "[0.100]"
+      assert html =~ "[0.300]"
+      refute html =~ "[0.200]"
+    end
+
+    test "a repeat held back while paused is dropped", %{conn: conn} do
+      {:ok, view, _html} = mount_host(conn)
+
+      inject(view, [:sensor, :imu], joint_state_message(0.1))
+      inject(view, [:sensor, :imu], joint_state_message(0.2))
+      wait_for_flush()
+
+      view |> element("button", "Pause") |> render_click()
+
+      Process.sleep(@debounce_window_ms)
+      wait_for_flush()
+
+      html = render(view)
+      assert html =~ "1 messages"
+      refute html =~ "[0.200]"
     end
 
     test "accepts another message once the debounce window has elapsed", %{conn: conn} do

@@ -101,4 +101,42 @@ defmodule BB.LiveView.Components.EventStreamFormatTest do
     assert String.valid?(html)
     assert field_value(view, "text") == "a" <> String.duplicate("é", 99) <> "…"
   end
+
+  describe "parameter changes" do
+    defp changed(old_value, new_value) do
+      %Message{
+        wall_time: System.os_time(:nanosecond),
+        payload: %BB.Parameter.Changed{
+          path: [:limits, :max_throttle],
+          old_value: old_value,
+          new_value: new_value,
+          source: :local
+        }
+      }
+    end
+
+    defp summary(view) do
+      view
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.find(".bb-event-summary")
+      |> Floki.text()
+    end
+
+    test "summarise the change from the old value to the new", %{conn: conn} do
+      {:ok, view, _html} = mount_host(conn)
+
+      show(view, [:param, :limits, :max_throttle], changed(0.3, 0.45))
+
+      assert summary(view) == "0.300 → 0.450"
+    end
+
+    test "summarise a first value as just the value", %{conn: conn} do
+      {:ok, view, _html} = mount_host(conn)
+
+      show(view, [:param, :limits, :max_throttle], changed(nil, 0.3))
+
+      assert summary(view) == "0.300"
+    end
+  end
 end
