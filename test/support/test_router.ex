@@ -30,5 +30,14 @@ defmodule BB.LiveView.TestRouter do
     bb_dashboard("/joint_robot", robot: BB.LiveView.JointRobot)
     bb_dashboard("/planar_robot", robot: BB.LiveView.PlanarRobot)
     bb_dashboard("/parameter_robot", robot: BB.LiveView.ParameterRobot)
+
+    bb_dashboard("/drive_robot",
+      robot: BB.LiveView.DriveRobot,
+      drive: [
+        publish: {BB.LiveView.DriveRecorder, :tick},
+        stop: {BB.LiveView.DriveRecorder, :stop},
+        throttle_scale: 0.5
+      ]
+    )
   end
 end
