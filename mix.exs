@@ -111,12 +111,17 @@ defmodule BB.LiveView.MixProject do
       # phx.install.* compositions.
       {:igniter, "~> 0.7 and >= 0.7.3", only: [:dev, :test], runtime: false},
       {:jason, "~> 1.4"},
+      # Plays `BB.LiveView.VideoSource` streams in the Images tab over WebRTC.
+      # Without it, video sources are ignored.
+      {:membrane_webrtc_plugin, "~> 0.26", optional: true},
       {:phoenix_live_view, "~> 1.0"},
       {:phx_install, "~> 0.1", only: [:dev, :test], runtime: false},
       {:plug, "~> 1.16"},
 
       # Build tools (dev only)
-      {:bandit, "~> 1.0", only: :dev},
+      # Optional rather than dev-only: membrane_webrtc_plugin needs it in
+      # every environment, but consumers shouldn't inherit it from us.
+      {:bandit, "~> 1.0", optional: true},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:phoenix_live_reload, "~> 1.5", only: :dev},
 

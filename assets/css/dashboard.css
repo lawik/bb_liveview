@@ -455,6 +455,22 @@
   font-variant-numeric: tabular-nums;
 }
 
+.bb-video {
+  background: #000;
+}
+
+.bb-video-status {
+  display: flex;
+  flex-basis: 100%;
+  gap: 0.75rem;
+  color: var(--bb-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.bb-video-error {
+  color: var(--bb-danger);
+}
+
 /* Dashboard Grid Layout */
 .bb-dashboard-grid {
   display: grid;

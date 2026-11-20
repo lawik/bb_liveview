@@ -43,7 +43,8 @@ defmodule BB.LiveView do
   - **Event Stream**: Real-time PubSub message monitoring
   - **Command Execution**: Execute robot commands with dynamic forms
   - **3D Visualisation**: Interactive Three.js robot viewer
-  - **Images**: Live feeds from every image sensor, in a tab beside the 3D view
+  - **Images**: Live feeds from every image sensor, and WebRTC video from every
+    `BB.LiveView.VideoSource`, in a tab beside the 3D view
   - **Parameters**: Edit robot parameters with type-aware inputs
 
   ## Multiple Robots

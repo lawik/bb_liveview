@@ -11,7 +11,7 @@ defmodule BB.LiveView.DashboardLive do
   - Joint positions and sliders
   - Event stream monitor
   - Command execution
-  - 3D visualisation, with a tab for live image sensor feeds
+  - 3D visualisation, with a tab for live image sensor feeds and video
   - Parameter editor
   """
 
@@ -217,6 +217,17 @@ defmodule BB.LiveView.DashboardLive do
     {:noreply, socket}
   end
 
+  # The Images tab's video tiles run in this process, so their WebRTC
+  # signaling, stream endings and monitors arrive here.
+  def handle_info({:membrane_webrtc_signaling, _pid, _message, _metadata} = message, socket),
+    do: forward_video_message(message, socket)
+
+  def handle_info({BB.LiveView.VideoSource, :ended, _signaling} = message, socket),
+    do: forward_video_message(message, socket)
+
+  def handle_info({:DOWN, _ref, :process, _pid, _reason} = message, socket),
+    do: forward_video_message(message, socket)
+
   def handle_info(_msg, socket) do
     {:noreply, socket}
   end
@@ -338,6 +349,11 @@ defmodule BB.LiveView.DashboardLive do
     robot_module
     |> Module.split()
     |> List.last()
+  end
+
+  defp forward_video_message(message, socket) do
+    send_update(Images, id: "images", event: {:video, message})
+    {:noreply, socket}
   end
 
   defp schedule_joint_state_flush(%{assigns: %{joint_state_flush_scheduled: true}} = socket),
