@@ -98,10 +98,13 @@ defmodule BB.LiveView.Components.ImagesTest do
         mount_host(conn, %{"stats_interval_ms" => 100, "push_interval_ms" => 1})
 
       for _ <- 1..5, do: inject(view, @camera, image())
-      Process.sleep(150)
-      settle(view)
 
-      assert view |> element(".bb-image-meta") |> render() =~ ~r/\d+\.\d fps/
+      # The rate appears on the first stats tick a whole interval after the
+      # first frame, which a fixed sleep can miss on a busy machine.
+      assert Enum.any?(1..50, fn _ ->
+               Process.sleep(20)
+               view |> element(".bb-image-meta") |> render() =~ ~r/\d+\.\d fps/
+             end)
     end
   end
 

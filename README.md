@@ -22,7 +22,7 @@ Interactive LiveView dashboard for [Beam Bots](https://github.com/beam-bots/bb) 
 - **Safety Controls** - Arm/disarm robot with visual state indicators
 - **Joint Control** - Real-time sliders for all movable joints with position feedback
 - **3D Visualisation** - Interactive Three.js view with orbit controls showing live robot pose
-- **Images** - A tab beside the 3D view with live feeds from every sensor publishing `BB.Message.Sensor.Image`
+- **Images** - A tab beside the 3D view with live feeds from every sensor publishing `BB.Message.Sensor.Image`, and WebRTC video from every `BB.LiveView.VideoSource`
 - **Event Stream** - Monitor PubSub messages with filtering and pause/resume
 - **Command Execution** - Dynamic forms for robot commands based on DSL definitions
 - **Parameter Editor** - View and modify runtime parameters with type-specific controls
@@ -171,6 +171,44 @@ A tab beside the 3D view showing live feeds from image sensors:
 - Path, resolution, encoding and measured frame rate for each feed
 - 8- and 16-bit RGB/BGR(A) and mono encodings (Bayer shown as greyscale)
 - Frames are only sent while the tab is open, at most 5 per second per sensor, newest first
+
+#### Video
+
+With [`membrane_webrtc_plugin`](https://hex.pm/packages/membrane_webrtc_plugin)
+in your dependencies, the tab also plays live video over WebRTC from every
+`BB.LiveView.VideoSource`, several at once. Without it, video sources are
+ignored.
+
+```elixir
+{:membrane_webrtc_plugin, "~> 0.26"}
+```
+
+A video source, typically a camera sensor, registers under its PubSub path
+and streams through a `Membrane.WebRTC.Sink` for each viewer that attaches:
+
+```elixir
+def init(opts) do
+  bb = Keyword.fetch!(opts, :bb)
+  {:ok, _} = BB.LiveView.VideoSource.register(bb.robot, [:sensor | bb.path], %{codec: :h264, width: 640, height: 480, framerate: 30})
+  # ...
+end
+
+def handle_call({BB.LiveView.VideoSource, :attach, signaling}, {viewer, _}, state) do
+  # Monitor `viewer`, add a Membrane.WebRTC.Sink on `signaling`, reply :ok.
+end
+
+def handle_call({BB.LiveView.VideoSource, :detach, signaling}, _from, state) do
+  # Remove that sink, reply :ok.
+end
+```
+
+See `BB.LiveView.VideoSource` for the whole contract. The dashboard:
+
+- Attaches only while the tab is open, and detaches when you switch away or the source goes
+- Shows the path, the source's codec, size and frame rate, the connection state and the frame rate the browser actually plays
+- Attaches again with a fresh connection when a stream ends, and retries a source that can't stream yet
+- Doesn't show an image tile for a path that has video
+- Uses no STUN or TURN servers, so it's for robots on the same network as the browser, and asks the browser for its smallest jitter buffer
 
 ### Event Stream
 

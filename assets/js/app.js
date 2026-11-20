@@ -6,11 +6,13 @@ import { LiveSocket } from "phoenix_live_view";
 
 import { AutoScroll } from "./hooks/auto_scroll";
 import { ImageGrid } from "./hooks/image_grid";
+import { VideoTile } from "./hooks/video_tile";
 import { Visualisation } from "./hooks/visualisation";
 
 const Hooks = {
   AutoScroll,
   ImageGrid,
+  VideoTile,
   Visualisation,
 };
 
